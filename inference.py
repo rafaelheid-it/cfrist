@@ -212,8 +212,8 @@ def cross_style_dirs(content_dir, style_dir):
     style_images = glob.glob(style_dir)
 
     # strengths seem to only effect ddim steps
-    strengths = [0.7]
-    scales = [10]
+    strengths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    scales = list(range(2, 11))
     c_image = content_image
     s_image = style_image
     
