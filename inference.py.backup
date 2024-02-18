@@ -193,15 +193,25 @@ def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 
 
 # model.cpu()
 
-# Log dir of run trained on all assets
-log_dir = "axe_12024-01-05T15-50-00_subtract_input_style_edge_clip_embeddings"
+# Log dir of run trained on single axe (1.png)
+#log_dir = "axe_12023-10-25T16-58-48_rerundefault"
 
+# Log dir of run trained on all axes
+#log_dir = "axes2023-10-14T15-31-55_test_axes"
+
+# Log dir of run trained on all assets
+#log_dir = "axe_12024-01-05T15-50-00_subtract_input_style_edge_clip_embeddings"
+
+#log_dir = "axe_12024-01-05T18-54-54_subtract_edge_clip_from_attentions"
+
+log_dir = "axe_12024-01-05T23-02-10_subtract_edge_clip_from_attention_module_output"
 
 model.embedding_manager.load(f"./logs/{log_dir}/checkpoints/embeddings_gs-2099.pt")
 model = model.to(device)
 
-content_image = "city_1.jpg"
-style_image = "axe_1.png"
+content_image = "Images/woman_1.jpg"
+#content_image = "Images/axe_reference_1.jpg"
+style_image = "Images/style_bases_axes/axe_1.png"
 
 content_dir = "/data2/4heid/content_bases/*"
 style_dir = "/data2/4heid/humblebundle/axes/*"
@@ -222,9 +232,9 @@ def cross_style_dirs(content_dir, style_dir):
             # for c_image in content_images:
             #     for s_image in style_images:
             main(prompt = '*', \
-                content_dir = 'Images/' + c_image, \
-                style_dir = 'Images/' + s_image, \
-                outdir_name = "subtracted_input_embeddings/" + log_dir + '/' + c_image + '-' + s_image, \
+                content_dir = c_image, \
+                style_dir = s_image, \
+                outdir_name = "tests_woman_1_2099/" + log_dir, \
                 ddim_steps = 50, \
                 strength = strength, \
                 seed=23, \
