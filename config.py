@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-# from modules.feature_removal.detectors import canny
+from modules.feature_removal.detectors import canny, difference_of_gaussians, hessian, laplace
 from detectors import canny, difference_of_gaussians, hessian, laplace
 
 @dataclass
