@@ -21,3 +21,9 @@ def hessian(image, sigmas=range(1, 10, 2), scale_range=None, scale_step=None,
 def canny(image, sigma=1., low_threshold=None, high_threshold=None,
           mask=None, use_quantiles=False, *, mode='constant', cval=0.0):
     return _canny(image, sigma, low_threshold, high_threshold, mask, use_quantiles, mode = mode, cval = cval)
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    from skimage.color import rgb2gray, rgba2rgb
+    image = rgb2gray(rgba2rgb(plt.imread('Images/axe_1.png')))
+    plt.imsave('Images/axe_1-canny.png', canny(image), cmap='gray')
