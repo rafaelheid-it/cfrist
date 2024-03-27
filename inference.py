@@ -65,7 +65,7 @@ model = load_model_from_config(config, f"{ckpt}")
 sampler = DDIMSampler(model)
 
 
-def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 0.5, model = None, seed=42, outdir_name='', scale=10.0):
+def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 50,strength = 0.5, model = None, seed=42, outdir_name='', scale=10.0):
     ddim_eta=0.0
     n_iter=1
     C=4
@@ -77,7 +77,7 @@ def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 
     precision="autocast"
     outdir="outputs/img2img-samples/"
     if outdir_name:
-        outdir += '/' + outdir_name
+        outdir += outdir_name
     else:
         outdir += str(seed)+'/'+str(ddim_steps)
     seed_everything(seed)
@@ -96,13 +96,13 @@ def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) + 10
     
-    style_name = style_dir.split('/')[-1].split('.')[0]
-    style_image = load_img(style_dir).to(device)
+    style_name = style_image_path.split('/')[-1].split('.')[0]
+    style_image = load_img(style_image_path).to(device)
     style_image = repeat(style_image, '1 ... -> b ...', b=batch_size)
     style_latent = model.get_first_stage_encoding(model.encode_first_stage(style_image))  # move to latent space
 
-    content_name =  content_dir.split('/')[-1].split('.')[0]
-    content_image = load_img(content_dir).to(device)
+    content_name =  content_image_path.split('/')[-1].split('.')[0]
+    content_image = load_img(content_image_path).to(device)
     content_image = repeat(content_image, '1 ... -> b ...', b=batch_size)
     content_latent = model.get_first_stage_encoding(model.encode_first_stage(content_image))  # move to latent space
 
@@ -132,9 +132,6 @@ def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 
 
                         # img2img
 
-                        # stochastic encode
-                        # z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-
                         # stochastic inversion
                         t_enc = int(strength * 1000) 
                         x_noisy = model.q_sample(x_start=init_latent, t=torch.tensor([t_enc]*batch_size).to(device))
@@ -147,12 +144,6 @@ def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 
                                                 unconditional_guidance_scale=scale,
                                                  unconditional_conditioning=uc,)
                         print(z_enc.shape, uc.shape, t_enc)
-
-                        # txt2img
-            #             noise  =torch.randn_like(content_latent)
-            #             samples, intermediates =sampler.sample(ddim_steps,1,(4,512,512),c,verbose=False, eta=1.,x_T = noise,
-            #    unconditional_guidance_scale=scale,
-            #    unconditional_conditioning=uc,)
 
                         x_samples = model.decode_first_stage(samples)
 
@@ -185,53 +176,54 @@ def main(prompt = '', content_dir = '', style_dir='',ddim_steps = 50,strength = 
                         ]) + '.jpg'
                     )
                 )
-                # Image.fromarray(grid.astype(np.uint8)).save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+                
                 grid_count += 1
 
                 toc = time.time()
     return output
 
-# model.cpu()
 
-# Log dir of run trained on all assets
-log_dir = "axe_12024-01-05T15-50-00_subtract_input_style_edge_clip_embeddings"
+"""
+TESTING/INFERENCE
+"""
+from .config import GlobalConfig, TestConfig
+from pathlib import Path
 
+def run_test(test_config: TestConfig, run_directory: str):
+    GlobalConfig.set(test_config)
 
-model.embedding_manager.load(f"./logs/{log_dir}/checkpoints/embeddings_gs-2099.pt")
-model = model.to(device)
-
-content_image = "city_1.jpg"
-style_image = "axe_1.png"
-
-content_dir = "/data2/4heid/content_bases/*"
-style_dir = "/data2/4heid/humblebundle/axes/*"
-
-
-def cross_style_dirs(content_dir, style_dir):
-    content_images = glob.glob(content_dir)
-    style_images = glob.glob(style_dir)
-
-    # strengths seem to only effect ddim steps
-    strengths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    scales = list(range(2, 11))
-    c_image = content_image
-    s_image = style_image
+    model = model.to('cpu')
+    model.embedding_manager.load(test_config.embedding_path)
+    model = model.to(device)
     
-    for scale in scales:
-        for strength in strengths:
-            # for c_image in content_images:
-            #     for s_image in style_images:
-            main(prompt = '*', \
-                content_dir = 'Images/' + c_image, \
-                style_dir = 'Images/' + s_image, \
-                outdir_name = "subtracted_input_embeddings/" + log_dir + '/' + c_image + '-' + s_image, \
-                ddim_steps = 50, \
-                strength = strength, \
-                seed=23, \
-                model = model, \
-                scale = scale
-            )
-            
-cross_style_dirs(content_dir, style_dir)
+    for guidance_scale in test_config.guidance_scales:
+        for strength in test_config.strengths:
+            for content_image_path in test_config.content_image_paths:
+                output_path = str(Path(
+                    run_directory, 
+                    test_config.test_name, 
+                    Path(test_config.style_image_path).name, 
+                    Path(content_image_path).name
+                ))
+
+                main(
+                    prompt = '*',
+                    content_image_path = content_image_path,
+                    style_image_path = test_config.style_image_path,
+                    outdir_name = output_path,
+                    ddim_steps = 50,
+                    strength = strength,
+                    scale = guidance_scale,
+                    model = model,
+                    seed=23,
+                )
 
 
+if __name__ == '__main__':
+    from .config import GlobalConfig
+    from .config import Tests
+
+    run_directory = time.strftime('%Y-%m-%d_%H-%M')
+
+    for test_config in Tests().test_configs:
+        run_test(test_config, run_directory)

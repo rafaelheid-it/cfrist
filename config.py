@@ -12,7 +12,9 @@ class TestConfig:
             content_base_directory: str = '',
             style_base_directory: str = '',
             embedding_directory: str = '',
-            feature_detector: dict = None
+            feature_detector: dict = None,
+            strengths: list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            guidance_scales: list = list(range(2, 11))
         ) -> None:
         self.test_name = test_name
         self.style_image = style_image
@@ -23,6 +25,9 @@ class TestConfig:
         self.style_base_directory = style_base_directory
         self.embedding_directory = embedding_directory
         self.feature_detector = feature_detector
+
+        self.strengths = strengths
+        self.guidance_scales = guidance_scales
 
     @property
     def embedding_path(self):
@@ -38,7 +43,7 @@ class TestConfig:
     
 
 class Tests:
-    tests = []
+    test_configs = []
     """Tests for subtraction from input."""
     def __init__(self) -> None:
         content_base_directory = 'Images/test_images/content_bases'
@@ -56,7 +61,14 @@ class Tests:
         ))
     
     def add_test(self, test_config: TestConfig):
-        self.tests.append(test_config)
+        self.test_configs.append(test_config)
 
 class TrainConfig:
     feature_detector = {'method': canny, 'args': {}}
+
+class GlobalConfig:
+    config = TrainConfig()
+
+    @staticmethod
+    def set(config):
+        GlobalConfig.config = config

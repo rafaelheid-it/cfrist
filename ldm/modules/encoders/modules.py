@@ -12,7 +12,7 @@ from ldm.modules.x_transformer import Encoder, TransformerWrapper  # TODO: can w
 import numpy as np
 import PIL
 from PIL import Image
-from config import TestConfig
+from config import GlobalConfig, TestConfig
 from skimage.color import rgb2gray
 
 def _expand_mask(mask, dtype, tgt_len = None):
@@ -338,23 +338,25 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         img = self.processor(text=["a"], images=image, return_tensors="pt", padding=True)
         image_embeds = self.image_encoder(**img.to(self.device)).image_embeds
 
-        # Get grayscale image in numpy format.
-        feature_image = (input_img[0].permute(1,2,0) + 1) / 2
-        feature_image_uint8 = (feature_image.cpu().numpy() * 255).astype(np.uint8)
-        feature_image = rgb2gray(feature_image_uint8)
+        if GlobalConfig.config.feature_detector:
+            print('Using config:', GlobalConfig.config.feature_detector)
+            # Get grayscale image in numpy format.
+            feature_image = (input_img[0].permute(1,2,0) + 1) / 2
+            feature_image_uint8 = (feature_image.cpu().numpy() * 255).astype(np.uint8)
+            feature_image = rgb2gray(feature_image_uint8)
 
-        # Generate feature image with method from config.
-        feature_detector = TestConfig.detector.get("method")
-        feature_detector_kwargs = TestConfig.detector.get("kwargs", {})
-        feature_image_detected = feature_detector(feature_image, **feature_detector_kwargs)
+            # Generate feature image with method from config.
+            feature_detector = GlobalConfig.config.feature_detector.get("method")
+            feature_detector_kwargs = GlobalConfig.config.feature_detector.get("kwargs", {})
+            feature_image_detected = feature_detector(feature_image, **feature_detector_kwargs)
 
-        # Get CLIP encoding for feature image.
-        # TODO(4heid): Add different encoding schemes, e.g. trained autoencoder that reconstructs feature images.
-        feature_image_pil = Image.fromarray(feature_image_detected)
-        feature_image_processed = self.processor(text=["a"], images=feature_image_pil, return_tensors="pt", padding=True)
-        feature_image_embeds = self.image_encoder(**feature_image_processed.to(self.device)).image_embeds
+            # Get CLIP encoding for feature image.
+            # TODO(4heid): Add different encoding schemes, e.g. trained autoencoder that reconstructs feature images.
+            feature_image_pil = Image.fromarray(feature_image_detected)
+            feature_image_processed = self.processor(text=["a"], images=feature_image_pil, return_tensors="pt", padding=True)
+            feature_image_embeds = self.image_encoder(**feature_image_processed.to(self.device)).image_embeds
 
-        image_embeds = image_embeds - feature_image_embeds
+            image_embeds = image_embeds - feature_image_embeds
 
         batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
                                         return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
