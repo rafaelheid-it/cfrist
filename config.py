@@ -59,6 +59,16 @@ class Tests:
             embedding_directory=embedding_directory,
             feature_detector={'method': canny, 'args': {}}
         ))
+        self.add_test(TestConfig(
+            test_name='axe_1_subtract_from_input_laplace_default',
+            style_image='axe_1.png',
+            content_images=['axe_reference_1.jpg', 'axe_reference_2.jpg', 'axe_reference_3.jpg'],
+            embedding='embeddings_axe_1_input_laplace_2099.pt',
+            content_base_directory=content_base_directory,
+            style_base_directory=style_base_directory,
+            embedding_directory=embedding_directory,
+            feature_detector={'method': laplace, 'args': {}}
+        ))
     
     def add_test(self, test_config: TestConfig):
         self.test_configs.append(test_config)
