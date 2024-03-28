@@ -171,6 +171,8 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         self.processor = CLIPProcessor.from_pretrained(version)
         self.image_encoder = CLIPModel.from_pretrained(version)
 
+        self.feature_embedding = None
+
         self.device = device
         self.max_length = max_length
         self.freeze()
@@ -338,7 +340,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         img = self.processor(text=["a"], images=image, return_tensors="pt", padding=True)
         image_embeds = self.image_encoder(**img.to(self.device)).image_embeds
 
-        if GlobalConfig.config.feature_detector:
+        if GlobalConfig.config.feature_detector and self.feature_embedding is None:
             print('Using config:', GlobalConfig.config.feature_detector)
             # Get grayscale image in numpy format.
             feature_image = (input_img[0].permute(1,2,0) + 1) / 2
@@ -354,9 +356,9 @@ class FrozenCLIPEmbedder(AbstractEncoder):
             # TODO(4heid): Add different encoding schemes, e.g. trained autoencoder that reconstructs feature images.
             feature_image_pil = Image.fromarray(feature_image_detected)
             feature_image_processed = self.processor(text=["a"], images=feature_image_pil, return_tensors="pt", padding=True)
-            feature_image_embeds = self.image_encoder(**feature_image_processed.to(self.device)).image_embeds
+            self.feature_embedding = self.image_encoder(**feature_image_processed.to(self.device)).image_embeds
 
-            image_embeds = image_embeds - feature_image_embeds
+            image_embeds = image_embeds - self.feature_embedding
 
         batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
                                         return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
