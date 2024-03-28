@@ -186,7 +186,7 @@ def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 
 """
 TESTING/INFERENCE
 """
-from .config import GlobalConfig, TestConfig
+from config import GlobalConfig, TestConfig
 from pathlib import Path
 
 def run_test(test_config: TestConfig, run_directory: str):
@@ -220,8 +220,7 @@ def run_test(test_config: TestConfig, run_directory: str):
 
 
 if __name__ == '__main__':
-    from .config import GlobalConfig
-    from .config import Tests
+    from config.test.current import Tests
 
     run_directory = time.strftime('%Y-%m-%d_%H-%M')
 
