@@ -1,3 +1,4 @@
+from typing import Union
 from config.train import TrainConfig
 from config.test import TestConfig
 
@@ -6,6 +7,6 @@ class GlobalConfig:
     config = None
 
     @staticmethod
-    def set(config: TrainConfig|TestConfig):
+    def set(config: Union[TrainConfig, TestConfig]):
         """Set used config to TrainConfig or TestConfig."""
         GlobalConfig.config = config

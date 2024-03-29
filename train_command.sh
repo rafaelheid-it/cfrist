@@ -1,1 +1,1 @@
-python main.py --base configs/stable-diffusion/v1-finetune.yaml -t --actual_resume ./models/sd/sd-v1-4.ckpt -n laplace_default_subtract_from_input_clip_embedding --gpus 0, --data_root /data2/4heid/humblebundle/axe_1
+python main.py --base configs/stable-diffusion/v1-finetune.yaml -t --actual_resume ./models/sd/sd-v1-4.ckpt -n axe_2_laplace_default_subtract_from_input_clip_embedding --gpus 0, --data_root Images/train_images/axe_2

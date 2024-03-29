@@ -2,6 +2,6 @@ from modules.feature_removal.detectors import canny, difference_of_gaussians, he
 
 class TrainConfig:
     feature_detector = {
-        'method': canny, 
+        'method': laplace, 
         'args': {}
     }
