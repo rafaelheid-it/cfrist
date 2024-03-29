@@ -11,22 +11,26 @@ class Tests:
         self.add_test(TestConfig(
             test_name='axe_1_subtract_from_input_canny_default',
             style_image='axe_1.png',
-            content_images=['axe_reference_1.jpg', 'axe_reference_2.jpg', 'axe_reference_3.jpg'],
-            embedding='embeddings_axe_1_input_canny_2099.pt',
+            content_images=['axe_reference_1.jpg', 'axe_reference_3.jpg'],
+            embedding='embeddings_axe_1_canny_default_2099.pt',
             feature_detector={'method': canny, 'args': {}},
             content_base_directory=content_base_directory,
             style_base_directory=style_base_directory,
             embedding_directory=embedding_directory,
+            strengths=[0.6],
+            guidance_scales=[5]
         ))
         self.add_test(TestConfig(
             test_name='axe_1_subtract_from_input_laplace_default',
             style_image='axe_1.png',
-            content_images=['axe_reference_1.jpg', 'axe_reference_2.jpg', 'axe_reference_3.jpg'],
-            embedding='embeddings_axe_1_input_laplace_2099.pt',
+            content_images=['axe_reference_1.jpg', 'axe_reference_3.jpg'],
+            embedding='embeddings_axe_1_laplace_default_2099.pt',
             feature_detector={'method': laplace, 'args': {}},
             content_base_directory=content_base_directory,
             style_base_directory=style_base_directory,
             embedding_directory=embedding_directory,
+            strengths=[0.6],
+            guidance_scales=[5]
         ))
     
     def add_test(self, test_config: TestConfig):

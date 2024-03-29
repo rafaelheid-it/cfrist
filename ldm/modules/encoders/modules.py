@@ -341,7 +341,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         image_embeds = self.image_encoder(**img.to(self.device)).image_embeds
 
         if GlobalConfig.config.feature_detector and self.feature_embedding is None:
-            print('Using config:', GlobalConfig.config.feature_detector)
+            print('Using config:', GlobalConfig.config)
             # Get grayscale image in numpy format.
             feature_image = (input_img[0].permute(1,2,0) + 1) / 2
             feature_image_uint8 = (feature_image.cpu().numpy() * 255).astype(np.uint8)

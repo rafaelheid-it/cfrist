@@ -191,6 +191,7 @@ from pathlib import Path
 
 def run_test(test_config: TestConfig, run_directory: str):
     GlobalConfig.set(test_config)
+    global model
 
     model = model.to('cpu')
     model.embedding_manager.load(test_config.embedding_path)
