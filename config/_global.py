@@ -1,8 +1,11 @@
 from config.train import TrainConfig
+from config.test import TestConfig
 
 class GlobalConfig:
-    config = TrainConfig()
+    # Either config.train.TrainConfig or config.test.TestConfig
+    config = None
 
     @staticmethod
-    def set(config):
+    def set(config: TrainConfig|TestConfig):
+        """Set used config to TrainConfig or TestConfig."""
         GlobalConfig.config = config

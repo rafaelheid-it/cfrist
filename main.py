@@ -548,6 +548,10 @@ if __name__ == "__main__":
     seed_everything(opt.seed)
 
     try:
+        from config import GlobalConfig
+        from config.train import TrainConfig
+        GlobalConfig.set(TrainConfig())
+        
         # init and save configs
         configs = [OmegaConf.load(cfg) for cfg in opt.base]
         cli = OmegaConf.from_dotlist(unknown)
