@@ -39,3 +39,22 @@ class TestConfig:
     @property
     def content_image_paths(self):
         return [str(Path(self.content_base_directory, content_image)) for content_image in self.content_images]
+    
+    def copy(self):
+        return TestConfig(
+            self.test_name,
+            self.style_image,
+            self.content_images,
+            self.embedding,
+            self.content_base_directory,
+            self.style_base_directory,
+            self.embedding_directory,
+            self.feature_detector,
+            self.strengths,
+            self.guidance_scales
+        )
+
+    def override(self, parameters: dict):
+        for param, value in parameters.items():
+            self.__setattr__(param, value)
+        return self

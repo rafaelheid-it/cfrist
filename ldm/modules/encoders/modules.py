@@ -349,8 +349,8 @@ class FrozenCLIPEmbedder(AbstractEncoder):
 
             # Generate feature image with method from config.
             feature_detector = GlobalConfig.config.feature_detector.get("method")
-            feature_detector_kwargs = GlobalConfig.config.feature_detector.get("kwargs", {})
-            feature_image_detected = feature_detector(feature_image, **feature_detector_kwargs)
+            feature_detector_args = GlobalConfig.config.feature_detector.get("args", {})
+            feature_image_detected = feature_detector(feature_image, **feature_detector_args)
 
             # Get CLIP encoding for feature image.
             # TODO(4heid): Add different encoding schemes, e.g. trained autoencoder that reconstructs feature images.
