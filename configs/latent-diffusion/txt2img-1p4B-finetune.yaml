@@ -1,6 +1,6 @@
 model:
   base_learning_rate: 5.0e-3
-  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  target: instldm.models.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.00085
     linear_end: 0.012
@@ -19,7 +19,7 @@ model:
     embedding_reg_weight: 0.0
 
     personalization_config:
-      target: ldm.modules.embedding_manager.EmbeddingManager
+      target: instldm.modules.embedding_manager.EmbeddingManager
       params:
         placeholder_strings: ["*"]  
         initializer_words: {'*':'scene'}
@@ -28,7 +28,7 @@ model:
         progressive_words: False
 
     unet_config:
-      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      target: instldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 32
         in_channels: 4
@@ -52,7 +52,7 @@ model:
         legacy: False
 
     first_stage_config:
-      target: ldm.models.autoencoder.AutoencoderKL
+      target: instldm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -75,7 +75,7 @@ model:
           target: torch.nn.Identity
 
     cond_stage_config:
-      target: ldm.modules.encoders.modules.BERTEmbedder
+      target: instldm.modules.encoders.modules.BERTEmbedder
       params:
         n_embed: 1280
         n_layer: 32
@@ -88,14 +88,14 @@ data:
     num_workers: 2
     wrap: false
     train:
-      target: ldm.data.personalized.PersonalizedBase
+      target: instldm.data.personalized.PersonalizedBase
       params:
         size: 256
         set: train
         per_image_tokens: False
         repeats: 100
     validation:
-      target: ldm.data.personalized.PersonalizedBase
+      target: instldm.data.personalized.PersonalizedBase
       params:
         size: 256
         set: val

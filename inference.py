@@ -4,6 +4,7 @@ import os, sys, glob
 import PIL
 import torch
 import numpy as np
+import einops
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm, trange
@@ -14,10 +15,19 @@ from torch import autocast
 from contextlib import nullcontext
 import time
 from pytorch_lightning import seed_everything
+from pathlib import Path
+
+from skimage.color import rgb2gray
+from modules.feature_removal.detectors import canny
 
 sys.path.append(os.path.dirname(sys.path[0]))
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
+sys.path.append(os.getcwd())
+
+# Add ControlNet dir to path, so references to module 'ldm' still work.
+sys.path.append(str(Path(os.getcwd(), '/sources/ControlNet')))
+
+from instldm.util import instantiate_from_config
+from instldm.models.diffusion.ddim import DDIMSampler
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -57,15 +67,20 @@ def load_img(path):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-
+# TODO: Create this config.
+# config="configs/stable-diffusion/v1-controlled-inference.yaml"
+# TODO: Download the checkpoint.
+# ckpt="models/controlnet/control_sd15_canny.pth"
 config="configs/stable-diffusion/v1-inference.yaml"
 ckpt="models/sd/sd-v1-4.ckpt"
 config = OmegaConf.load(f"{config}")
 model = load_model_from_config(config, f"{ckpt}")
+# TODO: Make own config with merged models.
+# model = create_model('./models/cldm_v15.yaml').cpu() 
 sampler = DDIMSampler(model)
 
 
-def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 50,strength = 0.5, model = None, seed=42, outdir_name='', scale=10.0):
+def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 50,strength = 0.5, model = None, seed=42, outdir_name='', scale=10.0, guess_mode = False):
     ddim_eta=0.0
     n_iter=1
     C=4
@@ -106,6 +121,15 @@ def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 
     content_image = repeat(content_image, '1 ... -> b ...', b=batch_size)
     content_latent = model.get_first_stage_encoding(model.encode_first_stage(content_image))  # move to latent space
 
+    canny_image = (content_image[0].permute(1,2,0) + 1) / 2
+    canny_image_uint8 = (canny_image.cpu().numpy() * 255).astype(np.uint8)
+    canny_image = rgb2gray(canny_image_uint8)
+    canny_image = canny(canny_image)
+
+    control = torch.from_numpy(canny_image.copy()).float().cuda() / 255.0
+    control = torch.stack([control for _ in range(n_samples)], dim=0)
+    control = einops.rearrange(control, 'b h w c -> b c h w').clone()
+
     init_latent = content_latent
 
     sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=ddim_eta, verbose=False)
@@ -124,21 +148,22 @@ def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 
                     for prompts in tqdm(data, desc="data"):
                         uc = None
                         if scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""], style_image)
+                            uc = {"c_concat": None if guess_mode else [control], "c_crossattn": [model.get_learned_conditioning(batch_size * [""], style_image)]}
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
 
-                        c= model.get_learned_conditioning(prompts, style_image)
+                        c= {"c_concat": [control], "c_crossattn": [model.get_learned_conditioning(prompts, style_image)]}
 
                         # img2img
 
                         # stochastic inversion
                         t_enc = int(strength * 1000) 
                         x_noisy = model.q_sample(x_start=init_latent, t=torch.tensor([t_enc]*batch_size).to(device))
-                        model_output = model.apply_model(x_noisy, torch.tensor([t_enc]*batch_size).to(device), c)
+                        model_output = model.apply_ldm(x_noisy, torch.tensor([t_enc]*batch_size).to(device), c)
                         z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device),\
                                                           noise = model_output, use_original_steps = True)
             
+                        model.control_scales = [strength * (0.825 ** float(12 - i)) for i in range(13)] if guess_mode else ([strength] * 13)
                         t_enc = int(strength * ddim_steps)
                         samples = sampler.decode(z_enc, c, t_enc, 
                                                 unconditional_guidance_scale=scale,

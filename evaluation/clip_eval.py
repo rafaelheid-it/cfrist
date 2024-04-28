@@ -2,7 +2,7 @@ import clip
 import torch
 from torchvision import transforms
 
-from ldm.models.diffusion.ddim import DDIMSampler
+from instldm.models.diffusion.ddim import DDIMSampler
 
 class CLIPEvaluator(object):
     def __init__(self, device, clip_model='ViT-B/32') -> None:

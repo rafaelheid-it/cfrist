@@ -16,8 +16,8 @@ import time
 from pytorch_lightning import seed_everything
 
 sys.path.append(os.path.dirname(sys.path[0]))
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
+from instldm.util import instantiate_from_config
+from instldm.models.diffusion.ddim import DDIMSampler
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 

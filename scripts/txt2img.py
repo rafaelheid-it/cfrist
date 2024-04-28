@@ -8,9 +8,9 @@ from einops import rearrange
 from torchvision.utils import make_grid
 
 sys.path.append(os.path.dirname(sys.path[0]))
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
+from instldm.util import instantiate_from_config
+from instldm.models.diffusion.ddim import DDIMSampler
+from instldm.models.diffusion.plms import PLMSSampler
 
 
 def load_model_from_config(config, ckpt, verbose=False):
