@@ -80,17 +80,13 @@
 
 
 <!-- ABOUT THE PROJECT -->
-## Inversion-Based Style Transfer with Diffusion Models
+## (CFRIST) (Controlled Feature-Removed Inversion-based Style Transfer)
+Thesis title: _Reducing object distortion in inversion-based image style transfer_
 
 <!-- ![teaser](./Images/teaser.png) -->
-![teaser](./Images/teaser.png)
+<!--![teaser](./Images/teaser.png)-->
 
-The artistic style within a painting is the means of expression, which includes not only the painting material, colors, and brushstrokes, but also the high-level attributes including semantic elements, object shapes, etc.  Previous arbitrary example-guided artistic image generation methods often fail to control shape changes or convey elements.  The pre-trained text-to-image synthesis diffusion probabilistic models have achieved remarkable quality, but it often requires extensive textual descriptions to accurately portray attributes of a particular painting. We believe that the uniqueness of an artwork lies precisely in the fact that it cannot be adequately explained with normal language.Our key idea is to learn artistic style directly from a single painting and then guide the synthesis without providing complex textual descriptions.  Specifically, we assume style as a learnable textual description of a painting.  We propose an inversion-based style transfer method (InST), which can efficiently and accurately learn the key information of an image, thus capturing and transferring the complete artistic style of a painting.  We demonstrate the quality and efficiency of our method on numerous paintings of various artists and styles.
-
-For details see the [paper](https://arxiv.org/abs/2211.13203) 
-
-### News
-📣📣 See our latest work about attribute-aware image generation with diffusion model [ProSpect: Expanded Conditioning for the Personalization of Attribute-aware Image Generation](https://arxiv.org/abs/2305.16225) in [Code](https://github.com/zyxElsa/ProSpect).
+The video game industry has been the biggest market in the entertainment sector for the past decades. As an important factor in their success, art as a medium used in a game can make the player feel a multitude of emotions and transport them into a different reality. The generation of such images can be both time and cost consuming, especially for independent developers without the backing of some organization. Image style transfer can be a great way to generate images for a game in different contexts but similar feel, by applying the style of a specific reference image onto an image with the desired content structure. One such method is inversion-based style transfer, that can learn the style in the reference image in about 20 minutes, by encoding the style information as the underlying diffusion model's text conditioning. Due to the method tending to deform objects with longer stylization rounds towards objects from the style reference, we propose Controlled Feature-Removed Inversion-based Style Transfer (CFRIST), a two-way scheme that enhances generated content structures in the stylized image. We firstly enrich the textual inversion process by removing object shape information from the style image while learning its feature vector. We secondly enforce the content image's object structure by controlling the generation process via a pre-trained ControlNet. The resulting method has the same training time as the original inversion-based style transfer, but synthesizes images where the content image's object structure is still intact even after long rounds of stylization.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -114,70 +110,71 @@ This section should list any major frameworks/libraries used to bootstrap your p
 <!-- GETTING STARTED -->
 ## Getting Started
 
-### Prerequisites
+### Clone repository
+
+   Clone the repository with its ControlNet dependency as submodule.
+   ```sh
+   git clone --recurse-submodules https://github.com/rafaelheid-it/cfrist.git
+   ```
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+### Create Python environment
+Please be aware, that you need to have some version [Anaconda](https://www.anaconda.com/) or [Miniconda](https://docs.anaconda.com/miniconda/miniconda-install/) installed for this to work.
 
 For packages, see environment.yaml.
 
   ```sh
   conda env create -f environment.yaml
-  conda activate ldm
+  conda activate cfrist
   ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-### Installation
-
-   Clone the repo
-   ```sh
-   git clone https://github.com/zyxElsa/InST.git
-   ```
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
 ### Train
+  Download the pretrained [Stable Diffusion Model](https://huggingface.co/benjamin-paine/stable-diffusion-v1-5) and save it at `./models/sd/v1-5-pruned-emaonly.ckpt`.
 
-   Train InST:
+   Train CFRIST:
    ```sh
-   python main.py --base configs/stable-diffusion/v1-finetune.yaml
-               -t 
-               --actual_resume ./models/sd/sd-v1-4.ckpt
-               -n <run_name> 
-               --gpus 0, 
-               --data_root /path/to/directory/with/images
+   python main.py \
+   --base configs/stable-diffusion/v1-finetune.yaml \
+    -t \
+    --actual_resume ./models/sd/v1-5-pruned-emaonly.ckpt \
+    -n <run_name> \
+    --gpus 0, \
+    --data_root /path/to/directory/with/images \
+    --feature_extractor laplace \
    ```
    
-   See `configs/stable-diffusion/v1-finetune.yaml` for more options
-   
-   Download the pretrained [Stable Diffusion Model](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt) and save it at ./models/sd/sd-v1-4.ckpt.
+   See `configs/stable-diffusion/v1-finetune.yaml` for more options.
+
+   The command is also available in `train_command.sh`.
+
+   A python script for training of different feature extractor / style image combinations can be found in `train_multiple.py`.
+
    
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ### Test
 
-   To generate new images, run InST.ipynb
+Download the pretrained [ControlNet Model](https://huggingface.co/lllyasviel/sd-controlnet-canny) and save it at `./models/sd/control_sd15_canny.pth`.
+
+   To generate new images, configure a TestConfig under `config/test/current.py` and run `python inference.py`.
+   
+   To use controlled image generation, `controlled=True` has to be set in the TestConfig.
    
 <p align="right">(<a href="#top">back to top</a>)</p>
-
-
-### Comparison Data
-
-  For a easier comparison with InST, the results generated with the same _random seed_ `seed=50` and similar _strength_ without any cherry-picking are supplemented. You can download the embedding.pt and content/style/results images [here](https://drive.google.com/drive/folders/1vte8eIp1QG9sQ4iKVeuQnB-RqmqMxVoD?usp=sharing).
-  <!-- ![comparison_data](./Images/comparison_data.png) -->
-  ![comparison_data](./Images/comparison_data.png)
-  
-<p align="right">(<a href="#top">back to top</a>)</p>
-
 
 ### Citation
    
-   ```sh
-   @InProceedings{Zhang_2023_inst,
-    author    = {Zhang, Yuxin and Huang, Nisha and Tang, Fan and Huang, Haibin and Ma, Chongyang and Dong, Weiming and Xu, Changsheng},
-    title     = {Inversion-Based Style Transfer With Diffusion Models},
-    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month     = {June},
-    year      = {2023},
-    pages     = {10146-10156}
+   ```
+   @masterthesis{heid2024reducing,
+    author    = {Rafael Heid},
+    title     = {Reducing object distortion in inversion-based image style transfer},
+    school    = {University of Hamburg},
+    month     = {September},
+    year      = {2024},
+    type      = {Master's thesis}
 }
    ```
    
@@ -243,11 +240,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 
 <!-- CONTACT -->
-## Contact
-
-Please feel free to open an issue or contact us personally if you have questions, need help, or need explanations. Write to one of the following email addresses, and maybe put one other in the cc:
-
-zhangyuxin2020@ia.ac.cn
 
 
 <!-- 
@@ -255,7 +247,6 @@ Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.c
 
 Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
  -->
-<p align="right">(<a href="#top">back to top</a>)</p>
 
 
 
