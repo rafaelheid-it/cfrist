@@ -80,7 +80,7 @@
 
 
 <!-- ABOUT THE PROJECT -->
-## (CFRIST) (Controlled Feature-Removed Inversion-based Style Transfer)
+## CFRIST (Controlled Feature-Removed Inversion-based Style Transfer)
 Thesis title: _Reducing object distortion in inversion-based image style transfer_
 
 <!-- ![teaser](./Images/teaser.png) -->
