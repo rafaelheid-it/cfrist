@@ -20,14 +20,21 @@ from pathlib import Path
 from skimage.color import rgb2gray
 from modules.feature_removal.detectors import canny
 
-sys.path.append(os.path.dirname(sys.path[0]))
-sys.path.append(os.getcwd())
-
+controlnet_path = 'sources/ControlNet'
 # Add ControlNet dir to path, so references to module 'ldm' still work.
-sys.path.append(str(Path(os.getcwd(), '/sources/ControlNet')))
+sys.path.append(controlnet_path)
+
+sys.path.append(os.path.dirname(sys.path[0]))
 
 from instldm.util import instantiate_from_config
-from instldm.models.diffusion.ddim import DDIMSampler
+from controlled_inst.ddim import DDIMSampler
+
+# ControlNet imports
+from cldm.model import load_state_dict
+from annotator.util import HWC3
+from annotator.canny import CannyDetector
+
+apply_canny = CannyDetector()
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -38,10 +45,11 @@ def chunk(it, size):
 
 def load_model_from_config(config, ckpt, verbose=False):
     print(f"Loading model from {ckpt}")
-    pl_sd = torch.load(ckpt, map_location="cpu")
-    if "global_step" in pl_sd:
-        print(f"Global Step: {pl_sd['global_step']}")
-    sd = pl_sd["state_dict"]
+    
+    sd = load_state_dict(ckpt)
+    if "global_step" in sd:
+        print(f"Global Step: {sd['global_step']}")
+
     model = instantiate_from_config(config.model)
     m, u = model.load_state_dict(sd, strict=False)
     if len(m) > 0 and verbose:
@@ -55,6 +63,9 @@ def load_model_from_config(config, ckpt, verbose=False):
     model.eval()
     return model
 
+def get_state_dict_from_checkpoint(ckpt):
+    print(f"Loading model state dict from {ckpt}.")
+    return load_state_dict(ckpt)
 
 def load_img(path):
     image = Image.open(path).convert("RGB")
@@ -67,20 +78,10 @@ def load_img(path):
     image = torch.from_numpy(image)
     return 2.*image - 1.
 
-# TODO: Create this config.
-# config="configs/stable-diffusion/v1-controlled-inference.yaml"
-# TODO: Download the checkpoint.
-# ckpt="models/controlnet/control_sd15_canny.pth"
-config="configs/stable-diffusion/v1-inference.yaml"
-ckpt="models/sd/sd-v1-4.ckpt"
-config = OmegaConf.load(f"{config}")
-model = load_model_from_config(config, f"{ckpt}")
-# TODO: Make own config with merged models.
-# model = create_model('./models/cldm_v15.yaml').cpu() 
-sampler = DDIMSampler(model)
+model = None
+sampler = None
 
-
-def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 50,strength = 0.5, model = None, seed=42, outdir_name='', scale=10.0, guess_mode = False):
+def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 50,strength = 0.5, model = None, seed=42, outdir_name='', scale=10.0, guess_mode = False, controlled = False, control_only = False):
     ddim_eta=0.0
     n_iter=1
     C=4
@@ -118,18 +119,29 @@ def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 
 
     content_name =  content_image_path.split('/')[-1].split('.')[0]
     content_image = load_img(content_image_path).to(device)
+
+    if control_only:
+        content_name += '--control_only'
+    
     content_image = repeat(content_image, '1 ... -> b ...', b=batch_size)
+
+    if controlled:
+        canny_image = (content_image[0].permute(1,2,0) + 1) / 2
+        canny_image_uint8 = (canny_image.cpu().numpy() * 255).astype(np.uint8)
+        canny_image = rgb2gray(canny_image_uint8)
+        canny_image = canny(canny_image).astype(np.uint8) * 255
+        canny_image = HWC3(canny_image)
+
+        control = torch.from_numpy(canny_image.copy()).float().cuda() / 255.0
+        control = torch.stack([control for _ in range(n_samples)], dim=0)
+        control = einops.rearrange(control, 'b h w c -> b c h w').clone()
+
+    if control_only:
+        random_noise_image = np.random.normal(0, 1, (256, 256, 3)).astype(np.float32)
+        content_image = (random_noise_image - np.min(random_noise_image)) / (np.max(random_noise_image) - np.min(random_noise_image)) # Map noise between -1 and 1
+        content_image = content_image[None].transpose(0, 3, 1, 2)
+        content_image = (torch.from_numpy(content_image) * 2 - 1).to(device)
     content_latent = model.get_first_stage_encoding(model.encode_first_stage(content_image))  # move to latent space
-
-    canny_image = (content_image[0].permute(1,2,0) + 1) / 2
-    canny_image_uint8 = (canny_image.cpu().numpy() * 255).astype(np.uint8)
-    canny_image = rgb2gray(canny_image_uint8)
-    canny_image = canny(canny_image)
-
-    control = torch.from_numpy(canny_image.copy()).float().cuda() / 255.0
-    control = torch.stack([control for _ in range(n_samples)], dim=0)
-    control = einops.rearrange(control, 'b h w c -> b c h w').clone()
-
     init_latent = content_latent
 
     sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=ddim_eta, verbose=False)
@@ -148,27 +160,38 @@ def main(prompt = '', content_image_path = '', style_image_path='',ddim_steps = 
                     for prompts in tqdm(data, desc="data"):
                         uc = None
                         if scale != 1.0:
-                            uc = {"c_concat": None if guess_mode else [control], "c_crossattn": [model.get_learned_conditioning(batch_size * [""], style_image)]}
+                            if controlled:
+                                uc = {"c_concat": None if guess_mode else [control], "c_crossattn": [model.get_learned_conditioning(batch_size * [""], style_image)]}
+                            else:
+                                uc = model.get_learned_conditioning(batch_size * [""], style_image)
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
 
-                        c= {"c_concat": [control], "c_crossattn": [model.get_learned_conditioning(prompts, style_image)]}
+                        if controlled:
+                            c = {"c_concat": [control], "c_crossattn": [model.get_learned_conditioning(prompts, style_image)]}
+                        else:
+                            c = model.get_learned_conditioning(prompts, style_image)
 
                         # img2img
 
                         # stochastic inversion
-                        t_enc = int(strength * 1000) 
+                        t_enc = int(strength * 1000)
                         x_noisy = model.q_sample(x_start=init_latent, t=torch.tensor([t_enc]*batch_size).to(device))
-                        model_output = model.apply_ldm(x_noisy, torch.tensor([t_enc]*batch_size).to(device), c)
+
+                        if controlled:
+                            model_output = model.apply_ldm(x_noisy, torch.tensor([t_enc]*batch_size).to(device), c)
+                        else:
+                            model_output = model.apply_model(x_noisy, torch.tensor([t_enc]*batch_size).to(device), c)
                         z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device),\
                                                           noise = model_output, use_original_steps = True)
             
-                        model.control_scales = [strength * (0.825 ** float(12 - i)) for i in range(13)] if guess_mode else ([strength] * 13)
+                        if controlled:
+                            model.control_scales = [strength * (0.825 ** float(12 - i)) for i in range(13)] if guess_mode else ([strength] * 13)
+                            
                         t_enc = int(strength * ddim_steps)
                         samples = sampler.decode(z_enc, c, t_enc, 
                                                 unconditional_guidance_scale=scale,
                                                  unconditional_conditioning=uc,)
-                        print(z_enc.shape, uc.shape, t_enc)
 
                         x_samples = model.decode_first_stage(samples)
 
@@ -233,7 +256,7 @@ def run_test(test_config: TestConfig, run_directory: str):
                 ))
 
                 main(
-                    prompt = '*',
+                    prompt = test_config.prompt,
                     content_image_path = content_image_path,
                     style_image_path = test_config.style_image_path,
                     outdir_name = output_path,
@@ -241,7 +264,9 @@ def run_test(test_config: TestConfig, run_directory: str):
                     strength = strength,
                     scale = guidance_scale,
                     model = model,
-                    seed=23,
+                    seed = 23,
+                    controlled = test_config.controlled,
+                    control_only= test_config.control_only
                 )
 
 
@@ -250,5 +275,26 @@ if __name__ == '__main__':
 
     run_directory = time.strftime('%Y-%m-%d_%H-%M')
 
+    last_checkpoint = None
+    last_model_config = None
     for test_config in Tests().test_configs:
+        if not test_config.sd_checkpoint:
+            print('A Stable Diffusion checkpoint needs to be provided. Skipping test "' + test_config.test_name + '".')
+            continue
+
+        if not test_config.model_config:
+            print('A model config needs to be provided. Skipping test "' + test_config.test_name + '".')
+            continue
+        
+        if test_config.model_config != last_model_config:
+            config = OmegaConf.load(f"{test_config.model_config}")
+            model = load_model_from_config(config, f"{test_config.sd_checkpoint}")
+            sampler = DDIMSampler(model)
+        elif test_config.sd_checkpoint != last_checkpoint:
+            sd = load_state_dict(test_config.sd_checkpoint)
+            model.load_state_dict(sd, strict=False)
+
         run_test(test_config, run_directory)
+
+        last_checkpoint = test_config.sd_checkpoint
+        last_model_config = test_config.model_config
