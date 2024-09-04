@@ -1,4 +1,4 @@
-name: ldm
+name: cfrist
 channels:
   - pytorch
   - defaults
@@ -26,6 +26,20 @@ dependencies:
     - transformers==4.18.0
     - torchmetrics==0.6.0
     - kornia==0.6
+    - gradio==3.16.2
+    - opencv-contrib-python==4.3.0.36
+    - webdataset==0.2.5
+    - open_clip_torch==2.0.2
+    - invisible-watermark>=0.1.5
+    - streamlit-drawable-canvas==0.8.0
+    - timm==0.6.12
+    - addict==2.4.0
+    - yapf==0.32.0
+    - prettytable==3.6.0
+    - safetensors==0.2.7
+    - basicsr==1.4.2
+    - scikit-image==0.20.0
+    - tqdm==4.66.1
     - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
     - -e git+https://github.com/openai/CLIP.git@main#egg=clip
     - -e .

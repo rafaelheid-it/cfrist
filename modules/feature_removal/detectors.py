@@ -3,11 +3,11 @@ from skimage.filters import laplace as _laplace
 from skimage.filters import hessian as _hessian
 from skimage.feature import canny as _canny
 
-def difference_of_gaussians(image, low_sigma, high_sigma=None, *, 
+def difference_of_gaussians(image, low_sigma=2, high_sigma=None, *, 
                                   mode='nearest', cval=0, channel_axis=None, 
                                   truncate=4.0):
     return _difference_of_gaussians(image, low_sigma, high_sigma, 
-                                    mode, cval, channel_axis, truncate)
+                                    mode=mode, cval=cval, channel_axis=channel_axis, truncate=truncate)
 
 def laplace(image, ksize=3):
     return _laplace(image, ksize)
@@ -20,4 +20,4 @@ def hessian(image, sigmas=range(1, 10, 2), scale_range=None, scale_step=None,
 
 def canny(image, sigma=1., low_threshold=None, high_threshold=None,
           mask=None, use_quantiles=False, *, mode='constant', cval=0.0):
-    return _canny(image, sigma, low_threshold, high_threshold, mask, use_quantiles, mode, cval)
+    return _canny(image, sigma, low_threshold, high_threshold, mask, use_quantiles, mode = mode, cval = cval)
