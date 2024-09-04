@@ -20,18 +20,25 @@ from torchvision.utils import make_grid
 from pytorch_lightning.utilities.distributed import rank_zero_only
 from omegaconf import ListConfig
 
-from ldm.util import log_txt_as_img, exists, default, ismap, isimage, mean_flat, count_params, instantiate_from_config
-from ldm.modules.ema import LitEma
-from ldm.modules.distributions.distributions import normal_kl, DiagonalGaussianDistribution
-from ldm.models.autoencoder import IdentityFirstStage, AutoencoderKL
-from ldm.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
-from ldm.models.diffusion.ddim import DDIMSampler
+from instldm.util import log_txt_as_img, exists, default, ismap, isimage, mean_flat, count_params, instantiate_from_config
+from instldm.modules.ema import LitEma
+from instldm.modules.distributions.distributions import normal_kl, DiagonalGaussianDistribution
+
+from instldm.models.autoencoder import IdentityFirstStage, AutoencoderKL
+from instldm.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
+from instldm.models.diffusion.ddim import DDIMSampler
 
 from instldm.models.diffusion.ddpm import disabled_train
-from ldm.models.diffusion.ddpm import DDPM
-from ldm.models.diffusion.ddpm import __conditioning_keys__ as controlnet_conditioning_keys
+from instldm.models.diffusion.ddpm import DDPM
+from instldm.models.diffusion.ddpm import __conditioning_keys__ as controlnet_conditioning_keys
 
 __conditioning_keys__ = controlnet_conditioning_keys
+
+# This will only work if ControlNet is imported.
+try:
+    from ldm.modules.distributions.distributions import  DiagonalGaussianDistribution as OriginalDiagonalGaussianDistribution
+except:
+    pass
 
 class MergedLatentDiffusion(DDPM):
     """
@@ -200,6 +207,8 @@ class MergedLatentDiffusion(DDPM):
 
     def get_first_stage_encoding(self, encoder_posterior):
         if isinstance(encoder_posterior, DiagonalGaussianDistribution):
+            z = encoder_posterior.sample()
+        elif isinstance(encoder_posterior, OriginalDiagonalGaussianDistribution):
             z = encoder_posterior.sample()
         elif isinstance(encoder_posterior, torch.Tensor):
             z = encoder_posterior
