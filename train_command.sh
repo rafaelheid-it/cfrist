@@ -1,0 +1,1 @@
+python main.py --base configs/stable-diffusion/v1-finetune.yaml -t --actual_resume ./models/sd/v1-5-pruned-emaonly.ckpt -n training_run_staff_1 --gpus 0, --data_root Images/train_images/staff_1 --feature_extractor laplace
