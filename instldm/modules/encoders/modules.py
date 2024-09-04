@@ -171,6 +171,8 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         self.processor = CLIPProcessor.from_pretrained(version)
         self.image_encoder = CLIPModel.from_pretrained(version)
 
+        self.last_img = None
+        self.feature_detector = None
         self.feature_embedding = None
 
         self.device = device
@@ -335,12 +337,23 @@ class FrozenCLIPEmbedder(AbstractEncoder):
             input_img = torch.rand(size=(1,3,512,512)).to(self.device)
         
         img = input_img[0].permute(1,2,0)
-        img = img.cpu().numpy().astype(np.uint8)
-        image = Image.fromarray(img)
-        img = self.processor(text=["a"], images=image, return_tensors="pt", padding=True)
-        image_embeds = self.image_encoder(**img.to(self.device)).image_embeds
+        img_np = img.cpu().numpy().astype(np.uint8)
+        image = Image.fromarray(img_np)
+        img_processed = self.processor(text=["a"], images=image, return_tensors="pt", padding=True)
+        image_embeds = self.image_encoder(**img_processed.to(self.device)).image_embeds
 
-        if GlobalConfig.config.feature_detector and self.feature_embedding is None:
+        # Unset the cached feature embedding so when running tests with
+        # different feature detectors without restarting the application,
+        # the feature embedding is recalculated using the correct feature detector.
+        if self.feature_detector != GlobalConfig.config.feature_detector:
+            self.feature_embedding = None
+
+        # Calculate feature embedding if a new feature detector is used or the
+        # input image has changed compared to the one used for the cached 
+        # feature embedding.
+        self.feature_detector = GlobalConfig.config.feature_detector
+        if self.feature_detector and (self.feature_embedding is None or not np.array_equal(img_np, self.last_img)):
+            self.last_img = np.copy(img_np)
             print('Using config:', GlobalConfig.config)
             # Get grayscale image in numpy format.
             feature_image = (input_img[0].permute(1,2,0) + 1) / 2
@@ -358,6 +371,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
             feature_image_processed = self.processor(text=["a"], images=feature_image_pil, return_tensors="pt", padding=True)
             self.feature_embedding = self.image_encoder(**feature_image_processed.to(self.device)).image_embeds
 
+        if self.feature_embedding is not None:
             image_embeds = image_embeds - self.feature_embedding
 
         batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
