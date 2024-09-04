@@ -21,11 +21,20 @@ from pytorch_lightning.utilities import rank_zero_info
 from instldm.data.base import Txt2ImgIterableBaseDataset
 from instldm.util import instantiate_from_config
 
+controlnet_path = str('sources/ControlNet')
+# Add ControlNet dir to path, so references to module 'ldm' still work.
+sys.path.append(controlnet_path)
+
+from cldm.model import load_state_dict
+
 def load_model_from_config(config, ckpt, verbose=False):
     print(f"Loading model from {ckpt}")
-    pl_sd = torch.load(ckpt, map_location="cpu")
-    sd = pl_sd["state_dict"]
-    config.model.params.ckpt_path = ckpt
+    #pl_sd = torch.load(ckpt, map_location="cpu")
+    
+    sd = load_state_dict(ckpt)
+    if "global_step" in sd:
+        print(f"Global Step: {sd['global_step']}")
+
     model = instantiate_from_config(config.model)
     m, u = model.load_state_dict(sd, strict=False)
     if len(m) > 0 and verbose:
@@ -145,6 +154,8 @@ def get_parser(**parser_kwargs):
         const=True, 
         default=True, 
         help="Prepend the final directory in the data_root to the output directory name")
+
+    parser.add_argument("--feature_extractor", type=str, default="", help="Feature extractor to use.")
 
     parser.add_argument("--actual_resume", type=str, default="", help="Path to model to actually resume from")
     parser.add_argument("--data_root", type=str, required=True, help="Path to directory with training images")
@@ -550,7 +561,11 @@ if __name__ == "__main__":
     try:
         from config import GlobalConfig
         from config.train import TrainConfig
-        GlobalConfig.set(TrainConfig())
+
+        train_config = TrainConfig()
+        train_config.set_feature_detector_from_string(opt.feature_extractor)
+
+        GlobalConfig.set(train_config)
         
         # init and save configs
         configs = [OmegaConf.load(cfg) for cfg in opt.base]
