@@ -165,6 +165,12 @@ Download the pretrained [ControlNet Model](https://huggingface.co/lllyasviel/sd-
    
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+### Data
+
+The gathered set of CC0 content images can be found in [Google Drive](https://drive.google.com/drive/folders/1BfK9FJYw8GjKDI1jalKz-ZXriVC0VNpM?usp=drive_link).
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
 ### Citation
    
    ```
