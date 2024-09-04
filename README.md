@@ -161,7 +161,7 @@ Download the pretrained [ControlNet Model](https://huggingface.co/lllyasviel/sd-
 
    To generate new images, configure a TestConfig under `config/test/current.py` and run `python inference.py`.
    
-   To use controlled image generation, `controlled=True` has to be set in the TestConfig.
+   To use controlled image generation, `controlled=True` has to be set in the TestConfig, the ControlNet Stable Diffusion checkpoint has to be set `sd_checkpoint='models/sd/control_sd15_canny.pth'` and the correct model config has to be loaded `model_config='configs/stable-diffusion/v1-controlled-inference.yaml'`.
    
 <p align="right">(<a href="#top">back to top</a>)</p>
 
