@@ -1,4 +1,4 @@
 [submodule "sources/ControlNet"]
 	path = sources/ControlNet
-	url = https://github.com/lllyasviel/ControlNet.git
+	url = git://github.com/lllyasviel/ControlNet.git
 	fetchRecurseSubmodules = true
