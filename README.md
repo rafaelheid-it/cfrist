@@ -77,7 +77,7 @@
   </ol>
 </details> -->
 
-
+This code depends heavily on [InST](https://github.com/zyxElsa/InST) and [ControlNet](https://github.com/lllyasviel/ControlNet) and their dependencies. Many thanks for openly providing implementations!
 
 <!-- ABOUT THE PROJECT -->
 ## CFRIST (Controlled Feature-Removed Inversion-based Style Transfer)
